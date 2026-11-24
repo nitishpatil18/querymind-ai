@@ -1,0 +1,65 @@
+# QueryMind AI: PostgreSQL + FastAPI backend + React frontend.
+#   cp .env.example .env   (set GOOGLE_API_KEY)
+#   docker compose up --build
+services:
+  postgres:
+    image: postgres:16-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-querymind}
+      POSTGRES_USER: ${POSTGRES_USER:-querymind}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      QUERYMIND_RO_USER: ${QUERYMIND_RO_USER:-querymind_ro}
+      QUERYMIND_RO_PASSWORD: ${QUERYMIND_RO_PASSWORD:?set QUERYMIND_RO_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data            # persistent database
+      - ./database/init:/docker-entrypoint-initdb.d:ro   # schema, seed data, read-only role (first start only)
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"    # loopback only; remove this line to keep it fully internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-querymind} -d ${POSTGRES_DB:-querymind}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # The API only ever receives the READ-ONLY credentials. There is no admin URL in this container.
+      DATABASE_URL: postgresql+psycopg://${QUERYMIND_RO_USER:-querymind_ro}:${QUERYMIND_RO_PASSWORD}@postgres:5432/${POSTGRES_DB:-querymind}
+      APP_ENV: production
+      DATA_DIR: /data
+      EVALUATION_REPORTS_DIR: /data/reports
+      CORS_ORIGINS: http://localhost:${FRONTEND_PORT:-5173}
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_MODEL: ${LLM_MODEL:-gemini-3.8-flash}
+      LLM_THINKING_LEVEL: ${LLM_THINKING_LEVEL:-}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      RETRIEVAL_TOP_K: ${RETRIEVAL_TOP_K:-10}
+      MAX_RESULT_ROWS: ${MAX_RESULT_ROWS:-1000}
+      STATEMENT_TIMEOUT_MS: ${STATEMENT_TIMEOUT_MS:-15000}
+    volumes:
+      - appdata:/data                              # persistent ChromaDB index, query history, evaluation reports
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:80"
+
+volumes:
+  pgdata:
+  appdata:

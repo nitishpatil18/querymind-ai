@@ -1,0 +1,18 @@
+# Runtime dependencies (versions verified together in this project's test run)
+fastapi==0.162.5
+uvicorn[standard]==0.54.0
+pydantic==2.14.3
+pydantic-settings==2.15.0
+sqlalchemy==2.0.57
+psycopg[binary]==3.3.9
+sqlglot==30.31.0
+
+# GenAI: LangChain 1.x with the Gemini integration
+langchain==1.4.10
+langchain-core==1.7.7
+langchain-google-genai==4.4.3
+# optional local model provider (LLM_PROVIDER=ollama):  pip install langchain-ollama
+
+# RAG
+chromadb==1.5.9
+sentence-transformers==6.3.0

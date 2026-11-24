@@ -1,0 +1,35 @@
+# secrets and local config
+.env
+.env.*
+!.env.example
+backend/.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# node
+node_modules/
+frontend/dist/
+frontend/coverage/
+
+# runtime data
+data/
+backend/data/
+*.sqlite
+*.db
+.chroma/
+
+# os / editor
+.DS_Store
+.vscode/
+.idea/
+
+# generated evaluation output (the committed offline report is kept)
+backend/evaluation/reports/latest.*
+backend/evaluation/reports/report_*.json
